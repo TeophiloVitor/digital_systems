@@ -1,0 +1,183 @@
+// Set 'TOP' for PWM resolution.  Assumes 16 MHz clock.
+// const unsigned int TOP = 0xFFFF; // 16-bit resolution.   244 Hz PWM
+// const unsigned int TOP = 0x7FFF; // 15-bit resolution.   488 Hz PWM
+// const unsigned int TOP = 0x3FFF; // 14-bit resolution.   976 Hz PWM
+// const unsigned int TOP = 0x1FFF; // 13-bit resolution.  1953 Hz PWM
+// const unsigned int TOP = 0x0FFF; // 12-bit resolution.  3906 Hz PWM
+//const unsigned int TOP = 0x07FF; // 11-bit resolution.  7812 Hz PWM
+const unsigned int TOP = 0x03FF; // 10-bit resolution. 15624 Hz PWM
+
+void DDRBegin(){
+  DDRB |= 0b00001110;
+  DDRD |= 0b01101000;
+  PORTD &= 0;
+  PORTB &= 0;
+}
+
+
+void PWMBegin()
+{
+  // Stop Timer/Counter1
+  TCCR1A = 0;  // Timer/Counter1 Control Register A
+  TCCR1B = 0;  // Timer/Counter1 Control Register B
+  
+  //TIMSK1 = 0;   // Timer/Counter1 Interrupt Mask Register
+  //TIFR1 = 0;   // Timer/Counter1 Interrupt Flag Register
+  
+  TCCR0A = 0;  // Timer/Counter0 Control Register A
+  TCCR0B = 0;  // Timer/Counter0 Control Register B
+  
+  TCCR2A = 0;  // Timer/Counter2 Control Register A
+  TCCR2B = 0;  // Timer/Counter2 Control Register B
+  
+  ICR1 = TOP;
+  
+  
+  OCR0A = 0;	// Top Value of 200(must be equal or greater than Duty Cycle)
+  OCR0B = 0;	// Duty cycle of 75%
+  
+  //config TCCR0A waveform mode 3
+  TCCR0A |= (1<<WGM01) | (1<<WGM00);
+  TCCR0B |= (1<<CS02);	//Pre-scaler 256
+  
+  // Set clock prescale to 64
+  TCCR1B |= (1 << CS11) | (1 << CS10); //pre-scaler 64
+
+  // Set to Timer/Counter1 to Waveform Generation Mode 14: Fast PWM with TOP set by ICR1
+  TCCR1A |= (1 << WGM11);
+  TCCR1B |= (1 << WGM13) | (1 << WGM12) ;
+  
+  //config TCCR2A waveform mode 3
+  TCCR2A |= (1<<WGM21) | (1<<WGM20);
+  TCCR2B |= (1<<CS22);	//pre-scaler 8
+  
+  
+  
+  
+}
+
+void PWMEnable0A()
+{
+  // Enable Fast PWM on Pin 6
+  TCCR0A |= (1<<COM0A1);
+}
+
+void PWMEnable0B()
+{
+  // Enable Fast PWM on Pin 5
+  TCCR0A |= (1<<COM0B1);
+}
+
+void PWMEnable1A()
+{
+  // Enable Fast PWM on Pin 9
+  TCCR1A |= (1 << COM1A1);
+}
+
+
+void PWMEnable1B()
+{
+  // Enable Fast PWM on Pin 10
+  TCCR1A |= (1 << COM1B1);
+}
+
+
+void PWMEnable2A()
+{
+  // Enable Fast PWM on Pin 11
+  TCCR2A |= (1<<COM2A1);
+}
+
+void PWMEnable2B()
+{
+  // Enable Fast PWM on Pin 3
+  TCCR2A |= (1<<COM2B1);
+}
+
+
+void PWM1A(unsigned int PWMValue)
+{
+  OCR1A = PWMValue;
+}
+
+
+void PWM1B(unsigned int PWMValue)
+{
+  OCR1B = PWMValue;
+}
+
+void PWM0A(unsigned int PWMValue)
+{
+  OCR0A = PWMValue;
+}
+
+
+void PWM0B(unsigned int PWMValue)
+{
+  OCR0B = PWMValue;
+}
+
+
+void PWM2A(unsigned int PWMValue)
+{
+  OCR2A = PWMValue;
+}
+
+
+void PWM2B(unsigned int PWMValue)
+{
+  OCR2B = PWMValue;
+}
+
+
+
+void setup()
+{
+  Serial.begin(9600);
+  DDRBegin();
+  PWMBegin();
+  
+  ADMUX |= (1<<REFS0);
+  ADCSRA |= (1<<ADEN) | (1<<ADPS2) | (1<<ADPS1) | (1<<ADPS0);
+  
+  PWM0A(0);
+  PWMEnable0A();
+  
+  PWM0B(0);
+  PWMEnable0B();
+  
+  PWM1A(0);
+  PWMEnable1A();
+  
+  PWM1B(0);
+  PWMEnable1B();
+  
+  PWM2A(0);
+  PWMEnable2A();
+  
+  PWM2B(0);
+  PWMEnable2B();
+}
+
+
+void loop()
+{
+  ADMUX &= 0b11110000;
+  ADMUX |= 0b00000000;
+  //ADCSRA |= 0b01000000;
+  ADCSRA |= (1<<ADSC);
+  //while(!(ADCSRA & 0b00010000));
+  while(!(ADCSRA & (1<<ADIF)));
+  
+  PWM0A(ADC);
+  PWM0B(ADC);
+  
+  PWM1A(ADC);
+  PWM1B(ADC);
+  
+  PWM2A(ADC);
+  PWM2B(ADC);
+  
+  Serial.println(OCR0A);
+  
+}
